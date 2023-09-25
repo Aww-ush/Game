@@ -14,6 +14,8 @@ public:
 	char GetComputerColour();
 	int GetHumanScore();
 	int GetComputerScore();
+	int GetHumanCapturePoints();
+	int GetComputerCapturePoints();
 	char GetNextMover();
 	string AskForPath();
 	string Trim(string str);

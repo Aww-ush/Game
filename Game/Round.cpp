@@ -3,7 +3,7 @@
 #include <string>
 
 using namespace std;
-Round::Round(Player *human, Player *computer, Board *board)
+Round::Round(Player *human, Player *computer, Board *board, bool isLoaded, char nextMover)
 {
     this->human = human;
     this->computer = computer;
@@ -11,20 +11,23 @@ Round::Round(Player *human, Player *computer, Board *board)
     this->pointCounter = new PointCounter(this->board);
     this->strategy = new Strategy(this->board);
     this->doesPlayerWantToContinue = false;
-
+    this->isLoaded = isLoaded;
+    this->nextMover = nextMover;
 }
 bool Round::PlayRound()
 {
     try
     {
         bool playRound = true;
-
-        // Initialize the game based on the first mover
-        InitializeGame();
-        if (!PrintGameStatus())
-        {
-            cout << "Internal Server Error: Game status could not be printed" << endl;
-            return false;
+        if (isLoaded) {
+            //calcute and set the code for this round for both human and computer
+            // for now it is just dummy data ie 0
+            int humanScore = pointCounter->CalculatedScoreInLoadedRound(human->GetColour());
+            int computerScore = pointCounter->CalculatedScoreInLoadedRound(computer->GetColour());
+            human->IncreaseRoundPoint(humanScore);
+            computer->IncreaseRoundPoint(computerScore);
+            cout << "The game was loaded" << endl;
+            
         }
         // Main game loop
         while (playRound)
@@ -50,7 +53,7 @@ bool Round::PlayRound()
             {
                 // Handle computer's turn
                 HandleComputerTurn();
-                if (GetPlayerWins() || human->GetTotalCapture() == CAPTURE_REQ_TO_WIN)
+                if (GetPlayerWins() || computer->GetTotalCapture() == CAPTURE_REQ_TO_WIN)
                 {
                     AnnounceRoundWinner();
                     if (!PrintScores())
@@ -63,16 +66,17 @@ bool Round::PlayRound()
             }
 
             // Print the current board and scores
-            if (!PrintGameStatus())
+            if (!board->PrintBoard())
             {
-                cout << "Internal Server Error: Game status could not be printed" << endl;
+                cout << "Internal Server Error: Scores could not be printed" << endl;
                 return false;
             }
-
             // Check if the game should continue
             if (!Continue()) {
-
-                AnnounceRoundWinner();
+                if (!PrintScores())
+                {
+                    cout << "Internal Server Error: Scores could not be printed" << endl;
+                }
                 SetDoesPlayerWantToContinuetName(false);
                 return false;
             }
@@ -85,58 +89,6 @@ bool Round::PlayRound()
         std::cerr << e.what() << '\n';
         return false;
     }
-}
-// this method figures who to move first based on the colour of the piece
-void Round::InitializeGame()
-{
-    if (human->GetColour() == 'W')
-    {
-        InitializeHumanFirst();
-    }
-    else
-    {
-        InitializeComputerFirst();
-    }
-}
-// this method makes human do the first move and checks if the first move is in
-// the center of the board
-void Round::InitializeHumanFirst()
-{
-    string position;
-    pair<int, int> numericalPosition;
-
-    do
-    {
-        position = AskForPosition();
-        numericalPosition = ConvertMoveToRowCol(position);
-    } while (numericalPosition.first == -1 || numericalPosition.second == -1);
-    // if it is not the center of the board ask to do it again
-    while (!human->MakeMove(numericalPosition.first, numericalPosition.second))
-    {
-        cout << "Failed to make first move, you can only insert in center 'J10'" << endl;
-        position = AskForPosition();
-        numericalPosition = ConvertMoveToRowCol(position);
-    }
-
-    int tmpScore = pointCounter->CalculatePoint(numericalPosition.first, numericalPosition.second, human->GetColour());
-    if (tmpScore > 0)
-        human->IncreasePoint(tmpScore);
-    SetNextMover(COMPUTER_CHARACTER);
-}
-
-void Round::InitializeComputerFirst()
-{
-    pair<int, int> numericalPosition = board->GetCenterOfBoard();
-
-    while (!computer->MakeMove(numericalPosition.first, numericalPosition.second))
-    {
-        cout << "Failed to make first move by computer" << endl;
-    }
-    int tmpScore = pointCounter->CalculatePoint(numericalPosition.first, numericalPosition.second, computer->GetColour());
-    if (tmpScore > 0)
-        computer->IncreasePoint(tmpScore);
-
-    SetNextMover(HUMAN_CHARACTER);
 }
 
 void Round::HandleHumanTurn()
@@ -160,9 +112,16 @@ void Round::HandleHumanTurn()
     int tmpScore = pointCounter->CalculatePoint(numericalPosition.first, numericalPosition.second, human->GetColour());
     int capturePoint = pointCounter->CalculateCapture(numericalPosition.first, numericalPosition.second, human->GetColour());
     if(tmpScore > 0) 
+    {
         human->IncreasePoint(tmpScore);
+        human->IncreaseRoundPoint(tmpScore);
+    }
     if (capturePoint > 0)
+    {
         human->SetTotalCapure(capturePoint);
+        human->IncreasePoint(capturePoint);
+        human->IncreaseRoundPoint(capturePoint);
+    }
 
     SetNextMover(COMPUTER_CHARACTER);
 
@@ -175,42 +134,30 @@ void Round::HandleComputerTurn()
         cout << "There is no place to insert any more piece" << endl;
         return;
     }
-    pair<int, int> numericalPosition = strategy->GenerateMove();
+    pair<int, int> numericalPosition = strategy->GenerateMove(computer->GetColour(), computer->GetTotalMoves(), computer->GetTotalPoints(), human->GetTotalPoints());
 
     while (!computer->MakeMove(numericalPosition.first, numericalPosition.second))
     {
-        numericalPosition = strategy->GenerateMove();
+        numericalPosition = strategy->GenerateMove(computer->GetColour(), computer->GetTotalMoves(), computer->GetTotalPoints(), human->GetTotalPoints());
     }
     // caculate scores
      int tmpScore = pointCounter->CalculatePoint(numericalPosition.first, numericalPosition.second, computer->GetColour());
+     int capturePoint = pointCounter->CalculateCapture(numericalPosition.first, numericalPosition.second, computer->GetColour());
      if (tmpScore > 0)
-        computer->IncreasePoint(tmpScore);
-    if (GetPlayerWins())
-    {
-        WinnerRoundMessage(computer->GetName());
-        if (!PrintGameStatus())
-        {
-            cout << "Internal Server Error: HandleComputerTurn" << endl;
-        }
-    }
+     {
+         computer->IncreasePoint(tmpScore + capturePoint);
+         computer->IncreaseRoundPoint(tmpScore + capturePoint);
+     }
+     if (capturePoint > 0)
+     {
+         computer->SetTotalCapure(capturePoint);
+         computer->IncreasePoint(capturePoint);
+         computer->IncreaseRoundPoint(capturePoint);
+     }
     SetNextMover(HUMAN_CHARACTER);
 
 }
 
-bool Round::PrintGameStatus()
-{
-    // Print board and scores
-    board->PrintBoard();
-
-    // Print scores
-    if (!PrintScores())
-    {
-        cout << "Internal Server Error: Scores could not be printed" << endl;
-        return false;
-    }
-
-    return true;
-}
 
 
 bool Round::AnnounceRoundWinner()
@@ -218,9 +165,7 @@ bool Round::AnnounceRoundWinner()
 
     try
     {
-        string name = "";
-       
-        if (this->human->GetTotalPoints() > this->computer->GetTotalPoints())
+        if (this->human->GetTotalRoundPoints() > this->computer->GetTotalRoundPoints())
             cout << WinnerRoundMessage("Human") << endl;
         else
             cout << WinnerRoundMessage("Computer") << endl;
@@ -239,7 +184,12 @@ bool Round::RestGame()
     try
     {
         SetDoesPlayerWantToContinuetName(true);
+        human->IncreaseRoundPoint(0);
+        computer->IncreaseRoundPoint(0);
+        human->SetTotalCapure(0);
+        computer->SetTotalCapure(0);
         playerWins = false;
+        isLoaded = false;
         return true;
     }
     catch (const std::exception& e)
@@ -283,6 +233,7 @@ void Round::SetNextMover(char player)
     nextMover = player;
 
 }
+
 pair<int, int> Round::ConvertMoveToRowCol(string position)
 {
 	// suppose the input is A10

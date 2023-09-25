@@ -11,53 +11,75 @@
 using namespace std;
 const char WHITE_PIECE = 'W';
 const char BLACK_PIECE = 'B';
+bool AskToLoadGame()
+{
+	try
+	{
+		char result;
+		do {
+			cout << "Do you want to load the game? Y or N" << endl;
+			cin >> result;
+			result = toupper(result);
+		} while (result != 'Y' && result != 'N');
+		bool reply = (result == 'Y') ? true : false;
+		return reply;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		cout << "Internal Server Error Method:  Tournament::AskToPlayNewRound()" << endl;
+		return false;
+	}
+}
 int main()
 {
-    // start the serialization19
-    Serialization* serializationObj = new Serialization();
-    vector<vector<char>> board = serializationObj->GetBoard();
-    for (int row = 0; row < 19; row++)
-    {
-        for (int column = 0; column < 19; column++)
-        {
-            cout << board[row][column];
-        }
-        cout << endl;
-    }
-    cout << "Next mover is " << serializationObj->GetNextMover() << endl;
-    cout << "Human Colour is " << serializationObj->GetHumanColour() << endl;
-    cout << "Human Score is " << serializationObj->GetHumanScore() << endl;
-    cout << "Computer Colour is " << serializationObj->GetComputerColour() << endl;
-    cout << "Computer Score is " << serializationObj->GetComputerScore() << endl;
-    /*Board* boardPtr = new Board();
+	// start the serialization19
+	if (AskToLoadGame()) {
+		Serialization* serializationObj = new Serialization();
+		//set board
+		Board* boardPtr = new Board(serializationObj->GetBoard());
+		Player* humanPlayer = new Human(boardPtr, serializationObj->GetHumanColour(), serializationObj->GetHumanScore(), serializationObj->GetHumanCapturePoints());
+		Player* computerPlayer = new Computer(boardPtr, serializationObj->GetComputerColour(), serializationObj->GetComputerScore(), serializationObj->GetComputerCapturePoints());
+		PointCounter* pointCounter = new PointCounter(boardPtr);
+		Tournament* tournament = new Tournament(boardPtr, humanPlayer, computerPlayer, true, serializationObj->GetNextMover());
+		if (!tournament->PlayRound())
+		{
+			cout << "Bye-bye!" << endl;
+		}
+	}
+	else {
+		Board* boardPtr = new Board();
 
-    cout << "The first player is decided by coin toss. Guess the side of coin H OR T!" << endl;
-    char userChoice;
-    cin >> userChoice;
-    Coin* coin = new Coin();
-    char humanColour, computerColour;
-    if (coin->Toss())
-    {
-        if (coin->WinOrLose(userChoice))
-        {
-            cout << "You have won the toss please go first" << endl;
-            humanColour = WHITE_PIECE;
-            computerColour = BLACK_PIECE;
-        }
-        else
-        {
-            cout << "Coumputer has won the toss you will go second" << endl;
-            humanColour = BLACK_PIECE;
-            computerColour = WHITE_PIECE;
-        }
-    }
-    Player* humanPlayer = new Human(boardPtr, 'W');
-    Player* computerPlayer = new Computer(boardPtr, 'B');
-    PointCounter* pointCounter = new PointCounter(boardPtr);
-    Tournament* tournament = new Tournament(boardPtr, humanPlayer, computerPlayer);
-    if (!tournament->PlayRound())
-    {
-        cout << "Do you want to save the game?" << endl;
-    }*/
-    return 0;
+		cout << "The first player is decided by coin toss. Guess the side of coin H OR T!" << endl;
+		char userChoice;
+		cin >> userChoice;
+		Coin* coin = new Coin();
+		char humanColour, computerColour;
+		if (coin->Toss())
+		{
+			if (coin->WinOrLose(userChoice))
+			{
+				cout << "You have won the toss please go first" << endl;
+				humanColour = WHITE_PIECE;
+				computerColour = BLACK_PIECE;
+			}
+			else
+			{
+				cout << "Coumputer has won the toss you will go second" << endl;
+				humanColour = BLACK_PIECE;
+				computerColour = WHITE_PIECE;
+			}
+		}
+		Player* humanPlayer = new Human(boardPtr, humanColour);
+		Player* computerPlayer = new Computer(boardPtr, computerColour);
+		PointCounter* pointCounter = new PointCounter(boardPtr);
+		char startingPlayer = (humanColour == WHITE_PIECE) ? 'H' : 'C';
+		Tournament* tournament = new Tournament(boardPtr, humanPlayer, computerPlayer, false, startingPlayer);
+		if (!tournament->PlayRound())
+		{
+			cout << "Do you want to save the game?" << endl;
+		}
+	}
+
+	return 0;
 }

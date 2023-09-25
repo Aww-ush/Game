@@ -185,6 +185,16 @@ int Serialization::GetComputerScore()
     return computerScore;
 }
 
+int Serialization::GetHumanCapturePoints()
+{
+    return humanCapturePoint;
+}
+
+int Serialization::GetComputerCapturePoints()
+{
+    return computerCapturePoint;
+}
+
 char Serialization::GetNextMover()
 {
     return nextMover;

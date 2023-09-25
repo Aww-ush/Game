@@ -4,7 +4,7 @@
 class Tournament
 {
 public:
-	Tournament(Board* board, Player* human, Player* computer);
+	Tournament(Board* board, Player* human, Player* computer, bool isLoaded, char startingPlayer);
 	Tournament();
 	bool PlayRound();
 	bool SaveGame();
@@ -13,14 +13,13 @@ public:
 	bool AskToPlayNewRound();
 	bool SetPlayNextRound(bool input);
 	bool GetPlayNextRound();
-	bool SaveScore();
 	bool DisplayTotalScore();
 	bool AskToSaveGame();
 	bool GetSave();
 	bool SetSave(bool answer);
+	bool ResetGame();
 private:
-	int totalHumanPoints;
-	int totalComputerPoints;
+	char startingPlayer;
 	int totalRoundsPlayed;
 	bool playNextRound;
 	// pointers
@@ -30,6 +29,7 @@ private:
 	Player* computer;
 	PointCounter* pointCounter;
 	bool save;
+	bool isLoaded;
 	// remove human and computer points
 };
 

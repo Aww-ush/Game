@@ -37,6 +37,8 @@ public:
     // for capture
     int CalculateCapture(int row, int column, char colour);
     
+    // calculate totalScore in tthe round that has beenLoaded
+    int CalculatedScoreInLoadedRound(char colour);
     std::pair<int, int> CalculatePointRightDiagonalUp(int row, int column, char colour);
     std::pair<int, int> CalculatePointRightDiagonalDown(int row, int column, char colour);
     std::pair<int, int> CalculatePointLeftDiagonalUp(int row, int column, char colour);

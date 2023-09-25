@@ -5,43 +5,33 @@ using namespace std;
 //make round
 // pass the strategy
 
-Tournament::Tournament(Board* board, Player* human, Player* computer)
+Tournament::Tournament(Board* board, Player* human, Player* computer, bool isLoadedFromFile, char startingPlayer)
 {
 	this->board = board;
 	this->human = human;
 	this->computer = computer;
 	this->pointCounter = new PointCounter(this->board);
-	this->round = new Round(this->human, this->computer, this->board);
 	this->playNextRound = true;
+	this->isLoaded = isLoadedFromFile;
+	this->startingPlayer = startingPlayer;
 }
 
 bool Tournament::PlayRound()
 {
 	try {
-
-		Round* round = new Round(human, computer, board);
+		
+		this->round = new Round(human, computer, board, isLoaded, startingPlayer);
 		while (GetPlayNextRound()) {
-			if (!board->ResetBoard()) {
-				cout << "Internal Server Error: board could not be reset" << endl;
-				return false;
-			}
-			if (!human->Reset()) {
-				cout << "Internal Server Error: human could not be reset" << endl;
-				return false;
-			}
-			if (!computer->Reset()) {
-				cout << "Internal Server Error: computer could not be reset" << endl;
-				return false;
-			}
-			if (!this->round->RestGame()) {
-				cout << "Internal Server Error: New round could not be processed" << endl;
-				return false;
-			}
+
 			if (!board->PrintBoard()) {
 				cout << "There was error printing board" << endl;
 				return false;
 			}
 			if (totalRoundsPlayed > 0) {
+				// this also because the reset Game was outside then the newly loaded board will be wiped
+				if (!ResetGame()) {
+					cout << "Internal Server error: Could not reset the board" << endl;
+				}
 				if (human->GetTotalPoints() > computer->GetTotalPoints())
 				{
 
@@ -62,10 +52,6 @@ bool Tournament::PlayRound()
 					//set the player wins flag off
 					round->SetPlayerWins(false);
 
-					//if (!SaveScore()) {
-					//	cout << "Internal Server Error: Scores could not be saved" << endl;
-					//	return false;
-					//}
 					if (!AskToPlayNewRound()) {
 						cout << "Internal Server Error: Input could not be processed" << endl;
 						return false;
@@ -77,11 +63,6 @@ bool Tournament::PlayRound()
 				// next when there is internal server error
 				else if (!round->GetDoesPlayerWantToContinue()) {
 					totalRoundsPlayed++;
-					//update the points
-					//if (!SaveScore()) {
-					//	cout << "Internal Server Error: Scores could not be saved" << endl;
-					//	return false;
-					//}
 					if (!DisplayTotalScore()) {
 						cout << "Internal Server Error: Scores could not be showed" << endl;
 						return false;
@@ -90,18 +71,22 @@ bool Tournament::PlayRound()
 						cout << "Internal Server Error: Winner could not be showed" << endl;
 						return false;
 					}
-					if (!AskToSaveGame()) {
-						cout << "Internal Server Error: Input could not be processed" << endl;
+					if (!SetPlayNextRound(false)) {
+						cout << "Internal Server Error" << endl;
 						return false;
 					}
-					if (GetSave()) {
-						if (!SaveGame()) {
-							cout << "Internal Server Error: Game could not be saved" << endl;
-							return false;
-						}
-					}
-					cout << "Thank you for playing" << endl;
-					exit(EXIT_SUCCESS);
+					//if (!AskToSaveGame()) {
+					//	cout << "Internal Server Error: Input could not be processed" << endl;
+					//	return false;
+					//}
+					//if (GetSave()) {
+					//	if (!SaveGame()) {
+					//		cout << "Internal Server Error: Game could not be saved" << endl;
+					//		return false;
+					//	}
+					//}
+					//cout << "Thank you for playing" << endl;
+					//exit(EXIT_SUCCESS);
 				}
 				else {
 					cout << "Internal Server Error" << endl;
@@ -110,7 +95,7 @@ bool Tournament::PlayRound()
 
 			}
 		}
-		if (AskToSaveGame()) {
+		if (!AskToSaveGame()) {
 			cout << "Internal Server Error: Input could not be processed" << endl;
 			return false;
 		}
@@ -179,6 +164,7 @@ bool Tournament::AskToPlayNewRound()
 bool Tournament::SetPlayNextRound(bool input)
 {
 	try {
+		this->playNextRound = input;
 		return true;
 	}
 	catch (const std::exception& e)
@@ -194,20 +180,6 @@ bool Tournament::GetPlayNextRound()
 	return playNextRound;
 }
 
-bool Tournament::SaveScore()
-{
-	try {
-		this->totalHumanPoints += this->human->GetTotalPoints();
-		this->totalComputerPoints += this->computer->GetTotalPoints();
-		return true;
-	}
-	catch (const std::exception& e)
-	{
-		std::cerr << e.what() << '\n';
-		cout << "Internal Server Error";
-		return false;
-	}
-}
 
 bool Tournament::DisplayTotalScore()
 {
@@ -267,11 +239,40 @@ bool Tournament::SetSave(bool answer)
 	}
 }
 
+
 // calls the serialization class to save the file
 bool Tournament::SaveGame()
 {
 	try {
 		cout << "Saving file: dummy" << endl;
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		cout << "Internal Server Error: Tournament::SaveGame";
+		return false;
+	}
+}
+bool Tournament::ResetGame()
+{
+	try {
+		if (!board->ResetBoard()) {
+			cout << "Internal Server Error: board could not be reset" << endl;
+			return false;
+		}
+		if (!human->Reset()) {
+			cout << "Internal Server Error: human could not be reset" << endl;
+			return false;
+		}
+		if (!computer->Reset()) {
+			cout << "Internal Server Error: computer could not be reset" << endl;
+			return false;
+		}
+		if (!this->round->RestGame()) {
+			cout << "Internal Server Error: New round could not be processed" << endl;
+			return false;
+		}
 		return true;
 	}
 	catch (const std::exception& e)

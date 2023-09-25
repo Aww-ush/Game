@@ -71,20 +71,6 @@ bool Board::PrintBoard()
                     
                     cout << BOARD_SIZE -  row << (row < 10 ? " " : "  ") ;
                 }
-                // for testing
-                if (
-                    row == 1 && column == 1||
-                    row == 1 && column == 2 ||
-                    row == 5 && column == 2 ||
-                    row == 6 && column == 2 
-                        ) {
-                    _board[row][column] = 'B';
-                }
-                if (
-                    row == 7 && column == 2
-                    ) {
-                    _board[row][column] = 'W';
-                }
                 cout << _board[row][column];
             }
             cout << endl;
@@ -262,5 +248,26 @@ char Board::GetOppositeColour(char colour)
     }
     else {
         return GetWhitePiece();
+    }
+}
+
+bool Board::SetBoard(std::vector<std::vector<char>> board)
+{
+    try {
+        for (int row = 0; row < BOARD_SIZE; row++)
+        {
+            for (int column = 0; column < BOARD_SIZE; column++)
+            {
+
+                this->_board[row][column] = board[row][column];
+            }
+        }
+        return true;
+   }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        cout << "There was error while setting the board" << endl;
+        return false;
     }
 }

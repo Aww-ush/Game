@@ -10,7 +10,7 @@ public:
     // constructor
 
     Board() : _board(BOARD_SIZE, std::vector<char>(BOARD_SIZE, INITIAL_BOARD_PIECE)) {}
-
+    Board(const std::vector<std::vector<char>>& initialBoard) : _board(initialBoard) {}
     // insert a piece with colour colur at place "place"
     bool InsertPiece(int row, int column, char pieceType);
     // return the current board
@@ -33,13 +33,14 @@ public:
     char GetWhitePiece();
     char GetBlackPiece();
     char GetOppositeColour(char colour);
-
+    bool SetBoard(std::vector<std::vector<char>> board);
 private:
     // making it compile time
     static constexpr int BOARD_SIZE = 19;
     static constexpr char INITIAL_BOARD_PIECE = 'O';
     static constexpr char WHITE_PIECE = 'W';
     static constexpr char BLACK_PIECE = 'B';
+
     std::vector<std::vector<char>> _board;
 };
 

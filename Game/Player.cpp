@@ -11,11 +11,11 @@ bool Player::Move(int row, int column, char colour)
 	{
 
 		// first move
-		//if (!CalculateMove()) {
-		//	cout << "Internal Server Error: Player::Move -> CalculateMove" << endl;
-		//	return false;
-		//}
-		if (isFirstMoveMaker() && GetTotalMoves() == 0)
+		if (!CalculateMove()) {
+			cout << "Internal Server Error: Player::Move -> CalculateMove" << endl;
+			return false;
+		}
+		if (isFirstMoveMaker() && GetTotalMoves() == 0 && GetTotalRoundPoints() == 0)
 		{
 			pair<int, int> center = _board->GetCenterOfBoard(); // remove this
 			if (center.first != row) {
@@ -78,6 +78,25 @@ bool Player::IncreasePoint(int points)
 	try
 	{
 		totalPoints += points;
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		return false;
+	}
+}
+
+int Player::GetTotalRoundPoints()
+{
+	return roundPoints;
+}
+
+bool Player::IncreaseRoundPoint(int points)
+{
+	try
+	{
+		roundPoints += points;
 		return true;
 	}
 	catch (const std::exception& e)
@@ -154,7 +173,7 @@ bool Player::Reset()
 {
 	try {
 		this->SetTotalMoves(0);
-		//this->IncreasePoint(0);
+		this->IncreaseRoundPoint(0);
 		this->SetTotalCapure(0);
 	}
 	catch (const std::exception& e)
@@ -178,7 +197,7 @@ bool Player::CalculateMove()
 
 			}
 		}
-		SetTotalMoves(count);
+		SetTotalMoves(count + totalCapture * 2);
 		return true;
 	}
 	catch (const std::exception& e)
@@ -208,7 +227,7 @@ bool Player::SetTotalCapure(int number)
 {
 	try
 	{
-		totalCapture = number;
+		totalCapture += number;
 		return true;
 	}
 	catch (const std::exception& e)

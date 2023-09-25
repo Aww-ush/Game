@@ -22,9 +22,10 @@ private:
 	bool playerWins = false;
 	bool saveGame = false;
 	const int CAPTURE_REQ_TO_WIN = 5;
+	bool isLoaded;
 	
 public:
-	Round(Player* human, Player* computer, Board* board);
+	Round(Player* human, Player* computer, Board* board, bool isLoaded, char nextMover);
 	void SetNextMover(char player);
 	bool PlayRound();
 	bool AnnounceRoundWinner();
@@ -35,8 +36,6 @@ public:
 	// check if there is any winner
 	bool GetPlayerWins();
 	void SetPlayerWins(bool answer);
-	// print the board and the score
-	bool PrintGameStatus();
 	// computer makes turns this called strategy
 	void HandleComputerTurn();
 	// human makes turns this does not called strategy
@@ -58,6 +57,8 @@ public:
 	int GetHumanPoints();
 	//get total computer points
 	int GetComputerPoints();
+
+
 
 };
 #endif // ROUND_H

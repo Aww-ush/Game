@@ -8,15 +8,43 @@ Human::Human(Board* board, char colour)
     {
         cout << "There was error setting the board for human" << endl;
     }
-    //if (!SetName(name))
-    //{
-    //    cout << "There was error setting the name for human" << endl;
-    //}
     if (!SetColour(colour))
     {
         cout << "There was error setting the color for human" << endl;
     }
+    if (!IncreasePoint(0)) {
+        cout << "There was error setting the score for human" << endl;
+
+    }
+    if (!SetTotalCapure(0)) {
+        cout << "There was error setting the caputure point for human" << endl;
+
+    }
 }
+
+Human::Human(Board* board, char colour, int score, int capturePoints)
+{
+    if (!SetBoard(board))
+    {
+        cout << "There was error setting the board for human" << endl;
+    }
+    if (!SetColour(colour))
+    {
+        cout << "There was error setting the color for human" << endl;
+    }
+    if (!IncreasePoint(score)) {
+        cout << "There was error setting the score for human" << endl;
+
+    }
+    if (!SetTotalCapure(capturePoints)) {
+        cout << "There was error setting the caputure point for human" << endl;
+
+    }
+    if (!CalculateMove()) {
+        cout << "There was error setting the caputure point for computer" << endl;
+    }
+}
+
 bool Human::MakeMove(int row, int column)
 {
     try
@@ -49,7 +77,6 @@ bool Human::SetName(string name)
     try
     {
         _playerName = "Human";
-        cout << "Set the player name to " << _playerName << endl;
         return true;
     }
     catch (const std::exception& e)
