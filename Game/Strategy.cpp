@@ -18,13 +18,10 @@ std::pair<int, int> Strategy::GenerateMove(char colour, int totalMoves, int play
             return board->GetCenterOfBoard();
         }
         if (totalMoves == 1 && colour == 'W') {
-            cout << "Second move must be three intersection away" << endl;
-            result = GenerateRandom(colour, totalMoves);
+            result = GenerateSecondRandom(colour);
             if (result.first != -1 || result.second != -1) {
-                cout << "Could not generate random number" << endl;
                 return result;
             }
-            return result;
         }
         if (playerScore > opponentScore) {
             
@@ -98,7 +95,7 @@ pair<int, int>  Strategy::PreventCapturingInitiative(char colour)
 
         pair<int, int> result(-1, -1);
         char oppositeColour = board->GetOppositeColour(colour);
-                result = BestLocationForCapture(oppositeColour);
+        result = BestLocationForCapture(oppositeColour);
         return result;
     }
     catch (const std::exception& e)
@@ -138,10 +135,7 @@ pair<int, int>  Strategy::PreventFinishingGame(char colour)
 pair<int, int> Strategy::GenerateRandom(char colour,int totalMoves)
 {
     try{
-        if (totalMoves == 1) {
-            return GenerateSecondRandom(colour);
-        }
-        else{
+
             int boardSize = board->GetBoardSize();
             int row = rand() % boardSize;
             int column = rand() % boardSize;
@@ -150,7 +144,7 @@ pair<int, int> Strategy::GenerateRandom(char colour,int totalMoves)
                 column = rand() % boardSize;
             }
             return pair<int, int>(row, column);
-        }
+        
     }
     catch (const std::exception& e)
     {
@@ -167,15 +161,9 @@ pair<int, int> Strategy::GenerateSecondRandom(char colour)
             int boardSize = board->GetBoardSize();
             row = rand() % boardSize;
              column = rand() % boardSize;
-            // check if it is within the board
-            while (!board->isWithInBoard(row)) {
-                row = rand() % boardSize;
-            }
-            while (!board->isWithInBoard(column)) {
-                column = rand() % boardSize;
-            }
-        } while (board->IsSecondPieceValid(row, column));
-        
+        } while (!board->IsSecondPieceValid(row, column));
+        cout << "Second move must be thrid intersection way from the center" << endl;
+        return pair<int, int>(row, column);
     }
     catch (const std::exception& e)
     {
@@ -210,6 +198,7 @@ std::pair<int, int> Strategy::BestLocationForScore(char colour)
 
             }
         }
+        cout << "This is the best location to get maximum score" << endl;
         return bestLocation;
     }
     catch (const std::exception& e)
@@ -239,7 +228,7 @@ pair<int, int> Strategy::BestLocationForCapture(char colour)
                         bestLocation.second = column;
                         score = newScore;
                     }
-                    if (newScore == score) {
+                    if (newScore == score && newScore > 0) {
                         // this is because of there are more option you want to capture so that you have option to create more bridge
                         if (row != 1 && column !=1) {
                             bestLocation.first = row;

@@ -122,7 +122,6 @@ bool Board::IsSecondPieceValid(int row, int column)
 	{
 		if (!IsPositionEmpty(row, column))
 		{
-			cout << "the position is not empty" << endl;
 			return false;
 		}
 		pair<int, int>
