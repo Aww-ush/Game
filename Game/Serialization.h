@@ -3,11 +3,16 @@
 #include <iostream>
 #include <vector>
 #include <string>
+#include "Board.h"
+#include "Computer.h"
+#include "Human.h"
 using namespace std;
 class Serialization
 {
 public:
 	Serialization();
+	Serialization(bool saveFile);
+
 	bool ParseFile();
 	vector<vector<char>> GetBoard();
 	char GetHumanColour();
@@ -18,9 +23,11 @@ public:
 	int GetComputerCapturePoints();
 	char GetNextMover();
 	string AskForPath();
+	string FormatTimestampForFilename(const std::string& timestamp);
 	string Trim(string str);
 	int ReturnCaptureOrScore(string line);
 	void SetColour(string line);
+	bool SaveGame(Board *board, Player *human, Player * computer, string nextPlayer, string nextPlayerColour);
 private:
 	int humanCapturePoint;
 	int computerCapturePoint;
@@ -35,7 +42,7 @@ private:
 	const string SCORE_MESSAGE = "Score: ";
 	const char HUMAN_CHARACTER = 'H';
 	const char COMPUTER_CHARACTER = 'C';
-
+	bool saveFile = false;
 };
 
 #endif // !SERIALIZATION_H

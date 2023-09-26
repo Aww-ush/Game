@@ -1,9 +1,15 @@
 #include "Serialization.h"
 #include <fstream>
+#include <chrono>
 Serialization::Serialization()
 {
     filePath = AskForPath();
     ParseFile();
+}
+
+Serialization::Serialization(bool saveFile)
+{
+    this->saveFile = saveFile;
 }
 
 std::string Serialization::AskForPath()
@@ -147,6 +153,43 @@ void Serialization::SetColour(string line) {
         cout << "Internal Server Error: Setting Colour for Human and Computer" << endl;
     }
     
+}
+
+bool Serialization::SaveGame(Board* board, Player* human, Player* computer, string nextPlayer, string nextPlayerColour)
+{
+    try{
+
+        string fileName = "Game.txt";
+        std::ofstream file(fileName);
+
+        // Write some data to the file
+        file << "Board:\n";
+        for (int row = 0; row < board->GetBoardSize(); row++) {
+            for (int column = 0; column < board->GetBoardSize(); column++) {
+                file << board->GetBoard()[row][column];
+            }
+            file << "\n";
+        }
+        file << endl;
+        file << "Human:\n";
+        file << "Capture pairs: " << human->GetTotalCapture() << endl;
+        file << "Score: " << human->GetTotalPoints() << endl;
+        file << endl;
+        file << "Computer:" << endl;
+        file << "Capture pairs: " << computer->GetTotalCapture() << endl;
+        file << "Score: " << computer->GetTotalPoints() << endl;
+        file << endl;
+        file << "Next player: " << nextPlayer << " - " << nextPlayerColour << endl;
+        // Close the file
+        file.close();
+        return true;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        cout << "Internal Server Error: Saving Game " << endl;
+        return false;
+    }
 }
 string Serialization::Trim(string str) {
     size_t first = str.find_first_not_of(" \t\n\r");

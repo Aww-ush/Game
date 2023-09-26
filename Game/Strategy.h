@@ -23,7 +23,8 @@ public:
     std::pair<int, int> BestLocationForScore(char colour);
     // return the best location for capture
     std::pair<int, int> BestLocationForCapture(char colour);
-    
+    // prevents opponents 5 in a row
+    std::pair<int, int> PreventFinishingGame(char colour);
     // return best locaiton for blocking maximun number of pieces
     std::pair<int, int> BestLocationForBlocking(char colour);
     bool CheckIfTwoOnEachEnd(int row, int column, char oppositeColour);
@@ -50,8 +51,8 @@ public:
     bool ShouldBlockVerticalForConsecutive(int row, int column, char oppositeColour);
 
     
-    
-    
+    // pioritize blocking
+    std::pair<int, int> PreventCapturingInitiative(char colour);
     // for creating iniciative
     std::pair<int, int> BestLocationForCreating(char colour);
     // thre bridge is which is clear insert inside the bridge
@@ -74,10 +75,12 @@ public:
     std::pair<int, int> CalculatePointUpVertical(int row, int column, char colour, pair<int, int> location);
     std::pair<int, int> CalculatePointDownVertical(int row, int column, char colour, pair<int, int> location);
 
-    
+    // check if valid point
+    bool ArePointsValid(int row, int column);
 private:
 	Board* board;
     PointCounter* pointCounter;
+    const string ErrorPointMessage = "The point is not vaild: Out of bound";
 };
 
 #endif // !STRATEGY_H

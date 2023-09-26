@@ -22,7 +22,7 @@ Human::Human(Board* board, char colour)
     }
 }
 
-Human::Human(Board* board, char colour, int score, int capturePoints)
+Human::Human(Board* board, char colour, int score, int capturePoints, int pieceCaputuredByEnemy)
 {
     if (!SetBoard(board))
     {
@@ -40,12 +40,12 @@ Human::Human(Board* board, char colour, int score, int capturePoints)
         cout << "There was error setting the caputure point for human" << endl;
 
     }
-    if (!CalculateMove()) {
+    if (!CalculateMove(pieceCaputuredByEnemy)) {
         cout << "There was error setting the caputure point for computer" << endl;
     }
 }
 
-bool Human::MakeMove(int row, int column)
+bool Human::MakeMove(int row, int column, int pieceCaputuredByEnemy)
 {
     try
     {
@@ -57,7 +57,7 @@ bool Human::MakeMove(int row, int column)
                 return false;
             }
         }
-        if (!Move(row, column, colour))
+        if (!Move(row, column, colour, pieceCaputuredByEnemy))
         {
             cout << "Could not move the piece to position " << row << " " << column << endl;
             return false;

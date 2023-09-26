@@ -23,9 +23,9 @@ private:
 	bool saveGame = false;
 	const int CAPTURE_REQ_TO_WIN = 5;
 	bool isLoaded;
-	
 public:
 	Round(Player* human, Player* computer, Board* board, bool isLoaded, char nextMover);
+	char GetNextMover();
 	void SetNextMover(char player);
 	bool PlayRound();
 	bool AnnounceRoundWinner();
@@ -49,6 +49,8 @@ public:
 	void InitializeComputerFirst();
 	// calls the human first move and human second omve
 	void InitializeGame();
+	// save the tournament score after player wins does not need to save the capture points
+	bool SaveScore();
 	// just print the scores
 	bool PrintScores();
 	bool GetDoesPlayerWantToContinue();

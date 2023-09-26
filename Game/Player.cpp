@@ -4,14 +4,14 @@
 using namespace std;
 
 // count the total points position are A10 where A is row abd 10 is column
-bool Player::Move(int row, int column, char colour)
+bool Player::Move(int row, int column, char colour, int pieceCaputuredByEnemy)
 {
 	// i want this fucntion to be overloaded in human calss
 	try
 	{
 
 		// first move
-		if (!CalculateMove()) {
+		if (!CalculateMove(pieceCaputuredByEnemy)) {
 			cout << "Internal Server Error: Player::Move -> CalculateMove" << endl;
 			return false;
 		}
@@ -184,7 +184,7 @@ bool Player::Reset()
 	}
 }
 
-bool Player::CalculateMove()
+bool Player::CalculateMove(int pieceCaputuredByEnemy)
 {
 	try {
 		int count = 0;
@@ -197,7 +197,7 @@ bool Player::CalculateMove()
 
 			}
 		}
-		SetTotalMoves(count + totalCapture * 2);
+		SetTotalMoves(count + pieceCaputuredByEnemy * 2);
 		return true;
 	}
 	catch (const std::exception& e)

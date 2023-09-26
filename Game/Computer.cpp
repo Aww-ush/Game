@@ -25,7 +25,7 @@ Computer::Computer(Board* board, char colour)
 
     }
 }
-Computer::Computer(Board* board, char colour, int score, int capturePoints)
+Computer::Computer(Board* board, char colour, int score, int capturePoints, int pieceCaputuredByEnemy)
 {
     if (!SetBoard(board))
     {
@@ -43,11 +43,11 @@ Computer::Computer(Board* board, char colour, int score, int capturePoints)
         cout << "There was error setting the caputure point for computer" << endl;
 
     }
-    if (!CalculateMove()){
+    if (!CalculateMove(pieceCaputuredByEnemy)){
         cout << "There was error setting the caputure point for computer" << endl;
     }
 }
-bool Computer::MakeMove(int row, int column)
+bool Computer::MakeMove(int row, int column, int pieceCaputuredByEnemy)
 {
     try
     {
@@ -62,14 +62,14 @@ bool Computer::MakeMove(int row, int column)
             }
         }
 
-        if (!Move(row, column, colour))
+        if (!Move(row, column, colour, pieceCaputuredByEnemy))
         {
             cout << "Could not move the piece to position " << row << " " << column << endl;
             return false;
         }
         char columnPosition = 'A' + column;
         
-        cout << "The computer placed a piece in " << columnPosition << row + 19 << endl;
+        cout << "The computer placed a piece in " << columnPosition <<  19 - row << endl;
         return true;
     }
     catch (const std::exception& e)

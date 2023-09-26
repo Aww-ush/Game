@@ -18,7 +18,7 @@ protected:
     std::string _computerName = "Computer";
 public:
     //count the total points position are A10 where A is row abd 10 is column
-    bool Move(int row, int column, char colour);
+    bool Move(int row, int column, char colour, int pieceCaputuredByEnemy);
     //tournament points
     int GetTotalPoints();
     bool IncreasePoint(int points);
@@ -43,9 +43,9 @@ public:
 
     virtual bool SetName(std::string name) = 0;
     virtual std::string GetName() = 0;
-    virtual bool MakeMove(int row, int column) = 0;
+    virtual bool MakeMove(int row, int column, int pieceCaputuredByEnemy) = 0;
     bool Reset();
-    bool CalculateMove();
+    bool CalculateMove(int pieceCaputuredByEnemy);
     
 };
 #endif // Player_H

@@ -9,8 +9,8 @@
 #include "Tournament.h"
 #include "Serialization.h"
 using namespace std;
-const char WHITE_PIECE = 'W';
-const char BLACK_PIECE = 'B';
+
+
 bool AskToLoadGame()
 {
 	try
@@ -33,13 +33,15 @@ bool AskToLoadGame()
 }
 int main()
 {
+	static const char WHITE_PIECE = 'W';
+	static const char BLACK_PIECE = 'B';
 	// start the serialization19
 	if (AskToLoadGame()) {
 		Serialization* serializationObj = new Serialization();
 		//set board
 		Board* boardPtr = new Board(serializationObj->GetBoard());
-		Player* humanPlayer = new Human(boardPtr, serializationObj->GetHumanColour(), serializationObj->GetHumanScore(), serializationObj->GetHumanCapturePoints());
-		Player* computerPlayer = new Computer(boardPtr, serializationObj->GetComputerColour(), serializationObj->GetComputerScore(), serializationObj->GetComputerCapturePoints());
+		Player* humanPlayer = new Human(boardPtr, serializationObj->GetHumanColour(), serializationObj->GetHumanScore(), serializationObj->GetHumanCapturePoints(), serializationObj->GetComputerCapturePoints());
+		Player* computerPlayer = new Computer(boardPtr, serializationObj->GetComputerColour(), serializationObj->GetComputerScore(), serializationObj->GetComputerCapturePoints(), serializationObj->GetHumanCapturePoints());
 		PointCounter* pointCounter = new PointCounter(boardPtr);
 		Tournament* tournament = new Tournament(boardPtr, humanPlayer, computerPlayer, true, serializationObj->GetNextMover());
 		if (!tournament->PlayRound())

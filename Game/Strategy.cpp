@@ -13,7 +13,21 @@ std::pair<int, int> Strategy::GenerateMove(char colour, int totalMoves, int play
 {
     try {
         pair<int, int> result(-1,-1);
-        if (playerScore < opponentScore) {
+        if (totalMoves == 0) {
+            cout << "First move must be center of the board" << endl;
+            return board->GetCenterOfBoard();
+        }
+        if (totalMoves == 1 && colour == 'W') {
+            cout << "Second move must be three intersection away" << endl;
+            result = GenerateRandom(colour, totalMoves);
+            if (result.first != -1 || result.second != -1) {
+                cout << "Could not generate random number" << endl;
+                return result;
+            }
+            return result;
+        }
+        if (playerScore > opponentScore) {
+            
             result = BestLocationForBlocking(colour);
             if (result.first != -1 || result.second != -1) {
                 return result;
@@ -32,12 +46,21 @@ std::pair<int, int> Strategy::GenerateMove(char colour, int totalMoves, int play
             }
             result = GenerateRandom(colour, totalMoves);
             if (result.first != -1 || result.second != -1) {
-                cout << "Could not generate random number" << endl;
+                cout << "Generating a valid point within the board" << endl;
                 return result;
             }
 
         }
         else {
+            // since the score is less do not  let them score
+            result = PreventFinishingGame(colour);
+            if (result.first != -1 || result.second != -1) {
+                return result;
+            }
+            result = PreventCapturingInitiative(colour);
+            if (result.first != -1 || result.second != -1) {
+                return result;
+            }
             result = BestLocationForCapture(colour);
             if (result.first != -1 || result.second != -1) {
                 return result;
@@ -60,6 +83,7 @@ std::pair<int, int> Strategy::GenerateMove(char colour, int totalMoves, int play
                 return result;
             }
         }
+        return result;
     }
     catch (const std::exception& e)
     {
@@ -68,7 +92,49 @@ std::pair<int, int> Strategy::GenerateMove(char colour, int totalMoves, int play
         return pair<int, int>();
     }
 }
+pair<int, int>  Strategy::PreventCapturingInitiative(char colour)
+{
+    try {
 
+        pair<int, int> result(-1, -1);
+        char oppositeColour = board->GetOppositeColour(colour);
+                result = BestLocationForCapture(oppositeColour);
+        return result;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        cout << "Could not generate move to prevent finishing the game" << endl;
+        return pair<int, int>(-1, -1);
+    }
+}
+pair<int, int>  Strategy::PreventFinishingGame(char colour)
+{
+    try {
+
+        pair<int, int> result(-1, -1);
+        char oppositeColour = board->GetOppositeColour(colour);
+        for (int row = 0; row < board->GetBoardSize(); row++)
+        {
+            for (int column = 0; column < board->GetBoardSize(); column++)
+            {
+                if (board->IsPositionEmpty(row, column)) {
+                    if (CheckIfTwoOnEachEnd(row, column, oppositeColour)) {
+                        cout << "This blocks 5 in a row" << endl;
+                        return pair<int, int>(row, column);
+                    }
+                }
+            }
+        }
+        return result;
+    }
+    catch (const std::exception& e)
+    {
+        std::cerr << e.what() << '\n';
+        cout << "Could not generate move to prevent finishing the game" << endl;
+        return pair<int, int>(-1, -1);
+    }
+}
 pair<int, int> Strategy::GenerateRandom(char colour,int totalMoves)
 {
     try{
@@ -168,14 +234,25 @@ pair<int, int> Strategy::BestLocationForCapture(char colour)
             {
                 if (board->IsPositionEmpty(row, column)) {
                     newScore = CalculateCapturePoint(row, column, colour);
-                    if (newScore > score) {
+                    if ( newScore > score) {
                         bestLocation.first = row;
                         bestLocation.second = column;
-
+                        score = newScore;
+                    }
+                    if (newScore == score) {
+                        // this is because of there are more option you want to capture so that you have option to create more bridge
+                        if (row != 1 && column !=1) {
+                            bestLocation.first = row;
+                            bestLocation.second = column;
+                            score = newScore;
+                        }
                     }
                 }
                      
             }
+        }
+        if (bestLocation.first != -1 || bestLocation.second != -1) {
+            cout << "This is best location to capture for maximum point" << endl;
         }
         return bestLocation;
     }
@@ -186,6 +263,8 @@ pair<int, int> Strategy::BestLocationForCapture(char colour)
         return pair<int, int>();
     }
 }
+
+
 
 std::pair<int, int> Strategy::BestLocationForBlocking(char colour)
 {
@@ -200,23 +279,34 @@ std::pair<int, int> Strategy::BestLocationForBlocking(char colour)
         {
             for (int column = 0; column < board->GetBoardSize(); column++)
             {
-                // check if there is two on each end
                 if (board->IsPositionEmpty(row, column)) {
                     if (CheckIfTwoOnEachEnd(row, column, oppositeColour)) {
                         cout << "This blocks 5 in a row" << endl;
                         return pair<int, int>(row, column);
                     }
-                    // check if there is two with in 
-                    else if (CheckIfTwoAndOneEitherEnd(row, column, colour, oppositeColour)) {
+                }
+            }
+        }
+        for (int row = 0; row < board->GetBoardSize(); row++)
+        {
+            for (int column = 0; column < board->GetBoardSize(); column++)
+            {
+                if (board->IsPositionEmpty(row, column)) {
+                    if (CheckIfTwoAndOneEitherEnd(row, column, colour, oppositeColour)) {
                         cout << "This blocks 4 in a row" << endl;
                         return pair<int, int>(row, column);
                     }
-                    else {
-                        // check if in middle of building initiative
-                        if (CheckIfCreatingInitiative(row, column, colour, oppositeColour)) {
-                            cout << "This blocks creating initiative" << endl;
-                            return pair<int, int>(row, column);
-                        }
+                }
+            }
+        }
+        for (int row = 0; row < board->GetBoardSize(); row++)
+        {
+            for (int column = 0; column < board->GetBoardSize(); column++)
+            {
+                if (board->IsPositionEmpty(row, column)) {
+                    if (CheckIfCreatingInitiative(row, column, colour, oppositeColour)) {
+                        cout << "This blocks creating initiative" << endl;
+                        return pair<int, int>(row, column);
                     }
                 }
             }
@@ -319,23 +409,38 @@ bool  Strategy::ShouldBlockRightDiagonalForFive(int row, int column, char opposi
     try{
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
-                            //three is a situation like xoxxx
-                            return true;
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        //three is a situation like xoxxx
+                        return true;
 
-                        }
                     }
                 }
-
             }
                 
         }
@@ -345,19 +450,35 @@ bool  Strategy::ShouldBlockRightDiagonalForFive(int row, int column, char opposi
 
         // check on the botton of the diagonal
         pointOneIntersectionAway = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int>pointTwoIntersectionAway = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayUp = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayUp.first, pointOneIntersectionAwayUp.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayUp.first][pointOneIntersectionAwayUp.second] == oppositeColour) {
-                    pair<int, int>pointTwoIntersectionAwayDown = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-                    if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayUp = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
-                            // there is situation like xxxox
-                            return true;
-                        }
+                    pair<int, int>pointTwoIntersectionAwayUp = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayUp.first, pointTwoIntersectionAwayUp.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointTwoIntersectionAwayUp.first][pointTwoIntersectionAwayUp.second] == oppositeColour) {
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        // there is situation like xxxox
+                        return true;
                     }
                 }
             }
@@ -367,7 +488,7 @@ bool  Strategy::ShouldBlockRightDiagonalForFive(int row, int column, char opposi
             return false;
         }
         // there is situation like xxoxx
-        return true;
+        return false;
     }
     catch (const std::exception& e)
     {
@@ -381,23 +502,38 @@ bool  Strategy::ShouldBlockLeftDiagonalForFive(int row, int column, char opposit
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
-                            //three is a situation like xoxxx
-                            return true;
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        //three is a situation like xoxxx
+                        return true;
 
-                        }
                     }
                 }
-
             }
 
         }
@@ -407,19 +543,35 @@ bool  Strategy::ShouldBlockLeftDiagonalForFive(int row, int column, char opposit
 
         // check on the botton of the diagonal
         pointOneIntersectionAway = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int>pointTwoIntersectionAway = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayUp = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayUp.first, pointOneIntersectionAwayUp.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayUp.first][pointOneIntersectionAwayUp.second] == oppositeColour) {
-                    pair<int, int>pointTwoIntersectionAwayDown = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-                    if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayUp = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
-                            // there is situation like xxxox
-                            return true;
-                        }
+                    pair<int, int>pointTwoIntersectionAwayUp = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayUp.first, pointTwoIntersectionAwayUp.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointTwoIntersectionAwayUp.first][pointTwoIntersectionAwayUp.second] == oppositeColour) {
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        // there is situation like xxxox
+                        return true;
                     }
                 }
             }
@@ -428,8 +580,7 @@ bool  Strategy::ShouldBlockLeftDiagonalForFive(int row, int column, char opposit
         else {
             return false;
         }
-        // there is situation like xxoxx
-        return true;
+        return false;
     }
     catch (const std::exception& e)
     {
@@ -443,20 +594,36 @@ bool  Strategy::ShouldBlockHorizontalForFive(int row, int column, char oppositeC
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
-                            //three is a situation like xoxxx
-                            return true;
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        //three is a situation like xoxxx
+                        return true;
 
-                        }
                     }
                 }
 
@@ -469,19 +636,36 @@ bool  Strategy::ShouldBlockHorizontalForFive(int row, int column, char oppositeC
 
         // check on the botton of the diagonal
         pointOneIntersectionAway = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int>pointTwoIntersectionAway = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayUp = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayUp.first, pointOneIntersectionAwayUp.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayUp.first][pointOneIntersectionAwayUp.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayUp = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
-                            // there is situation like xxxox
-                            return true;
-                        }
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayUp = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayUp.first, pointThreeIntersectionAwayUp.second)) {
+                        return false;
+                    }
+
+                    if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
+                        // there is situation like xxxox
+                        return true;
                     }
                 }
             }
@@ -490,8 +674,7 @@ bool  Strategy::ShouldBlockHorizontalForFive(int row, int column, char oppositeC
         else {
             return false;
         }
-        // there is situation like xxoxx
-        return true;
+        return false;
     }
     catch (const std::exception& e)
     {
@@ -505,20 +688,39 @@ bool  Strategy::ShouldBlockVerticalForFive(int row, int column, char oppositeCol
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
+
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
-                            //three is a situation like xoxxx
-                            return true;
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayDown = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
+                        //three is a situation like xoxxx
+                        return true;
 
-                        }
                     }
                 }
 
@@ -529,21 +731,38 @@ bool  Strategy::ShouldBlockVerticalForFive(int row, int column, char oppositeCol
             return false;
         }
 
-        // check on the botton of the diagonal
+        // check on the botton of the vertical
         pointOneIntersectionAway = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int>pointTwoIntersectionAway = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(2, 2));
-            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] != oppositeColour)
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+            if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayUp = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayUp.first, pointOneIntersectionAwayUp.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayUp.first][pointOneIntersectionAwayUp.second] == oppositeColour) {
                     pair<int, int>pointTwoIntersectionAwayDown = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+                    if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                        return false;
+                    }
                     if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour) {
-                        pair<int, int>pointThreeIntersectionAwayUp = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(2, 2));
-                        if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
-                            // there is situation like xxxox
-                            return true;
-                        }
+                        return true;
+                    }
+                    pair<int, int>pointThreeIntersectionAwayUp = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(3, 3));
+                    if (!ArePointsValid(pointThreeIntersectionAwayUp.first, pointThreeIntersectionAwayUp.second)) {
+                        return false;
+                    }
+                    if (board->GetBoard()[pointThreeIntersectionAwayUp.first][pointThreeIntersectionAwayUp.second] == oppositeColour) {
+                        // there is situation like xxxox
+                        return true;
                     }
                 }
             }
@@ -553,7 +772,7 @@ bool  Strategy::ShouldBlockVerticalForFive(int row, int column, char oppositeCol
             return false;
         }
         // there is situation like xxoxx
-        return true;
+        return false;
     }
     catch (const std::exception& e)
     {
@@ -579,10 +798,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
         if (righDiagonalUp.first != -1 || righDiagonalUp.second != -1) {
             if (colour == board->GetBoard()[righDiagonalUp.first][righDiagonalUp.second]) {
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow >= righDiagonalUp.first; tmpRow--, tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -590,17 +807,14 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
                     totalCapture++;
                 }
             }
-
         }
         // calculate the point ie 3 distance away in rt diagonal - down send (-1, -1) if not within board
         pair<int, int> righDiagonalDown = CalculatePointRightDiagonalDown(row, column, colour, threeIntersectionAway);
         if (righDiagonalDown.first != -1 || righDiagonalDown.second != -1) {
             if (colour == board->GetBoard()[righDiagonalDown.first][righDiagonalDown.second]) {
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow <= righDiagonalDown.first; tmpRow++, tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -615,10 +829,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
         if (leftDiagonalUp.first != -1 || leftDiagonalUp.second != -1) {
             if (colour == board->GetBoard()[leftDiagonalUp.first][leftDiagonalUp.second]) {
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow >= leftDiagonalUp.first; tmpRow--, tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -633,10 +845,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
             if (colour == board->GetBoard()[leftDiagonalDown.first][leftDiagonalDown.second]) {
 
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow <= leftDiagonalDown.first; tmpRow++, tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -652,10 +862,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
             if (colour == board->GetBoard()[leftHorizontal.first][leftHorizontal.second]) {
 
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpColumn >= leftHorizontal.second; tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -671,10 +879,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
             if (colour == board->GetBoard()[rightHorizontal.first][rightHorizontal.second]) {
 
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpColumn <= rightHorizontal.second; tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -690,10 +896,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
             if (colour == board->GetBoard()[upVertical.first][upVertical.second]) {
 
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow >= upVertical.first; tmpRow--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -709,10 +913,8 @@ int Strategy::CalculateCapturePoint(int row, int column, char colour)
             if (colour == board->GetBoard()[downVertical.first][downVertical.second]) {
 
                 int count = 0;
-                vector<pair<int, int>> captureLocation;
                 for (int tmpRow = row, tmpColumn = column; tmpRow <= downVertical.first; tmpRow++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour)) {
-                        captureLocation.push_back(pair<int, int>(tmpRow, tmpColumn));
                         count++;
                     }
                 }
@@ -745,11 +947,8 @@ std::pair<int, int> Strategy::CalculatePointRightDiagonalUp(int row, int column,
             // The point is within valid boundaries
             return std::pair<int, int>(newRow, newColumn);
         }
-        else
-        {
-            // The point is out of bounds
-            return std::pair<int, int>(-1, -1);
-        }
+        return std::pair<int, int>(-1, -1);
+
     }
     catch (const std::exception& e) {
         std::cerr << e.what() << '\n';
@@ -935,18 +1134,39 @@ std::pair<int, int> Strategy::CalculatePointDownVertical(int row, int column, ch
 
 
 
+
 // four
 
 bool  Strategy::ShouldBlockRightDiagonalForFour(int row, int column, char oppositeColour) {
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
+
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -955,12 +1175,31 @@ bool  Strategy::ShouldBlockRightDiagonalForFour(int row, int column, char opposi
             return false;
         }
         pair<int, int> pointOneIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
-            pair<int, int> pointTwoIntersectionAwayDown = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            pair<int, int> pointTwoIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                return false;
+            }
+
             if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -982,12 +1221,32 @@ bool  Strategy::ShouldBlockLeftDiagonalForFour(int row, int column, char opposit
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+                    return false;
+                }
+
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -996,12 +1255,32 @@ bool  Strategy::ShouldBlockLeftDiagonalForFour(int row, int column, char opposit
             return false;
         }
         pair<int, int> pointOneIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
-            pair<int, int> pointTwoIntersectionAwayDown = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            pair<int, int> pointTwoIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                return false;
+            }
+
             if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+                    return false;
+                }
+
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -1023,12 +1302,28 @@ bool  Strategy::ShouldBlockHorizontalForFour(int row, int column, char oppositeC
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) {
+                return false;
+            }
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayRight = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayRight.first, pointOneIntersectionAwayRight.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayRight.first][pointOneIntersectionAwayRight.second] == oppositeColour) {
+                    return true;
+                }                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -1037,12 +1332,29 @@ bool  Strategy::ShouldBlockHorizontalForFour(int row, int column, char oppositeC
             return false;
         }
         pair<int, int> pointOneIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) {
+            return false;
+        }
         if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) {
+                return false;
+            }
             if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+                    return false;
+                }
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -1064,12 +1376,28 @@ bool  Strategy::ShouldBlockVerticalForFour(int row, int column, char oppositeCol
     try {
         // check on the top of the diagonal
         pair<int, int> pointOneIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) {
+            return false;
+        }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAwayRight = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAwayRight.first, pointOneIntersectionAwayRight.second)) { return false; }
+
                 if (board->GetBoard()[pointOneIntersectionAwayRight.first][pointOneIntersectionAwayRight.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -1078,12 +1406,26 @@ bool  Strategy::ShouldBlockVerticalForFour(int row, int column, char oppositeCol
             return false;
         }
         pair<int, int> pointOneIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAwayDown.first, pointOneIntersectionAwayDown.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAwayDown.first, pointTwoIntersectionAwayDown.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAwayDown.first][pointTwoIntersectionAwayDown.second] == oppositeColour)
             {
                 pair<int, int> pointOneIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+                if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
                 if (board->GetBoard()[pointOneIntersectionAwayDown.first][pointOneIntersectionAwayDown.second] == oppositeColour) {
+                    return true;
+                }
+                pair<int, int> pointThreeIntersectionAwayDown = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(3, 3));
+                if (!ArePointsValid(pointThreeIntersectionAwayDown.first, pointThreeIntersectionAwayDown.second)) {
+                    return false;
+                }
+
+                if (board->GetBoard()[pointThreeIntersectionAwayDown.first][pointThreeIntersectionAwayDown.second] == oppositeColour) {
                     return true;
                 }
             }
@@ -1106,16 +1448,24 @@ bool Strategy::ShouldBlockRightDiagonalConsecutive(int row, int column, char opp
 {
     try{
         pair<int, int> pointOneIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointRightDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
             }
         }
         pointOneIntersectionAway = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointRightDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
@@ -1137,16 +1487,24 @@ bool Strategy::ShouldBlockLeftDiagonalForConsecutive(int row, int column, char o
 {
     try {
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftDiagonalUp(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
             }
         }
         pointOneIntersectionAway = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftDiagonalDown(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
@@ -1167,16 +1525,24 @@ bool Strategy::ShouldBlockHorizontalForConsecutive(int row, int column, char opp
 {
     try {
         pair<int, int> pointOneIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointLeftHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
             }
         }
         pointOneIntersectionAway = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointRightHorizontal(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
+
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
@@ -1197,16 +1563,22 @@ bool Strategy::ShouldBlockVerticalForConsecutive(int row, int column, char oppos
 {
     try {
         pair<int, int> pointOneIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointUpVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
             }
         }
         pointOneIntersectionAway = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(1, 1));
+        if (!ArePointsValid(pointOneIntersectionAway.first, pointOneIntersectionAway.second)) { return false; }
+
         if (board->GetBoard()[pointOneIntersectionAway.first][pointOneIntersectionAway.second] == oppositeColour) {
             pair<int, int> pointTwoIntersectionAway = CalculatePointDownVertical(row, column, oppositeColour, pair<int, int>(2, 2));
+            
+            if (!ArePointsValid(pointTwoIntersectionAway.first, pointTwoIntersectionAway.second)) { return false; }
             if (board->GetBoard()[pointTwoIntersectionAway.first][pointTwoIntersectionAway.second] == oppositeColour)
             {
                 return true;
@@ -1226,36 +1598,49 @@ std::pair<int, int> Strategy::BestLocationForCreating(char colour)
 {
     try {
         pair<int, int> bestLocation(-1, -1);
-        // check for bridges and place inside the bridge
+        // find a bridges and place inside the bridge ir xx_x <-making this
         for (int row = 0; row < board->GetBoardSize(); row++)
         {
             for (int column = 0; column < board->GetBoardSize(); column++)
             {
-                pair<int, int> locationToPlace = CheckForBridges(row, column, colour);
-                if (locationToPlace.first != -1 || locationToPlace.second != -1) {
-                    
-                    return pair<int, int>(row, column);
+                if(board->GetBoard()[row][column] == colour) {
+                    pair<int, int> locationToPlace = CheckForBridges(row, column, colour);
+                    if (locationToPlace.first != -1 || locationToPlace.second != -1) {
+                        cout << "Best Location to fill in bridge for 4 in a row" << endl;
+                        return locationToPlace;
+                    }
                 }
                 
             }
         }
-        // create a bridge
+        // create a bridge making x__x
         for (int row = 0; row < board->GetBoardSize(); row++)
         {
             for (int column = 0; column < board->GetBoardSize(); column++)
             {
-                pair<int, int> locationToPlace = CreateBridge(row, column, colour);
-                if (locationToPlace.first != -1 || locationToPlace.second != -1) {
-                    
+                if (board->GetBoard()[row][column] == colour) {
+                    pair<int, int> locationToPlace = CreateBridge(row, column, colour);
+                    if (locationToPlace.first != -1 || locationToPlace.second != -1) {
+                        cout << "Best Location to start creating a bridge for 4 in a row" << endl;
+                        return locationToPlace;
+                    }
                 }
-
-
-
-
             }
         }
         // place randomly in a spot where bridge can be created
-        // place randomly since no suitable place found
+            for (int row = 0; row < board->GetBoardSize(); row++)
+            {
+                for (int column = 0; column < board->GetBoardSize(); column++)
+                {
+                    if (IsGoodPointToCreateBridge(row, column, colour)) {
+                        cout << "Best Location where the point is not surrounded by opponents" << endl;
+
+                        return pair<int, int>(row, column);
+
+                    }
+                }
+            }
+            return pair<int, int>(-1, -1);
     }
     catch (const std::exception& e)
     {
@@ -1272,12 +1657,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
         if (righDiagonalUp.first != -1 || righDiagonalUp.second != -1) {
             if (board->IsPositionEmpty(righDiagonalUp.first,righDiagonalUp.second)) {
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= righDiagonalUp.first; tmpRow--, tmpColumn++) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow > righDiagonalUp.first; tmpRow--, tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     return righDiagonalUp;
                 }
             }
@@ -1288,12 +1673,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
         if (righDiagonalDown.first != -1 || righDiagonalDown.second != -1) {
             if (board->IsPositionEmpty(righDiagonalDown.first,righDiagonalDown.second)) {
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= righDiagonalDown.first; tmpRow++, tmpColumn--) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow < righDiagonalDown.first; tmpRow++, tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     return righDiagonalDown;
 
                 }
@@ -1305,12 +1690,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(leftDiagonalUp.first, leftDiagonalUp.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= leftDiagonalUp.first; tmpRow--, tmpColumn--) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow > leftDiagonalUp.first; tmpRow--, tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == board->GetOppositeColour(colour) || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     return leftDiagonalUp;
                 }
             }
@@ -1321,12 +1706,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(leftDiagonalDown.first, leftDiagonalDown.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= leftDiagonalDown.first; tmpRow++, tmpColumn++) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow < leftDiagonalDown.first; tmpRow++, tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     
                     return leftDiagonalDown;
                 }
@@ -1338,12 +1723,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(leftHorizontal.first, leftHorizontal.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpColumn >= leftHorizontal.second; tmpColumn--) {
+                for (int tmpRow = row, tmpColumn = column; tmpColumn > leftHorizontal.second; tmpColumn--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     
                     return leftHorizontal;
                 }
@@ -1355,12 +1740,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(rightHorizontal.first, rightHorizontal.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpColumn <= rightHorizontal.second; tmpColumn++) {
+                for (int tmpRow = row, tmpColumn = column; tmpColumn < rightHorizontal.second; tmpColumn++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] ==colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     // remove the piece
                     return rightHorizontal;
 
@@ -1373,12 +1758,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(upVertical.first, upVertical.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= upVertical.first; tmpRow--) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow > upVertical.first; tmpRow--) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     return upVertical;
                 }
             }
@@ -1389,12 +1774,12 @@ std::pair<int, int> Strategy::CreateBridge(int row, int column, char colour)
             if (board->IsPositionEmpty(downVertical.first, downVertical.second)) {
 
                 int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= downVertical.first; tmpRow++) {
+                for (int tmpRow = row, tmpColumn = column; tmpRow < downVertical.first; tmpRow++) {
                     if (board->GetBoard()[tmpRow][tmpColumn] == colour || board->IsPositionEmpty(tmpRow, tmpColumn)) {
                         count++;
                     }
                 }
-                if (count == 2) {
+                if (count >= 2) {
                     return downVertical;
 
                 }
@@ -1425,7 +1810,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                     }
                 }
                 if (count == 2) {
-                    return righDiagonalUp;
+                    return CalculatePointRightDiagonalUp(row, column, colour, pair<int, int>(1, 1));
                 }
             }
 
@@ -1441,7 +1826,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                     }
                 }
                 if (count == 2) {
-                    return righDiagonalDown;
+                    return CalculatePointRightDiagonalDown(row, column, colour, pair<int, int>(1, 1));
 
                 }
             }
@@ -1457,7 +1842,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                     }
                 }
                 if (count == 2) {
-                    return leftDiagonalUp;
+                    return  CalculatePointLeftDiagonalUp(row, column, colour, pair<int, int>(1, 1));
                 }
             }
         }
@@ -1475,7 +1860,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                 }
                 if (count == 2) {
 
-                    return leftDiagonalDown;
+                    return  CalculatePointLeftDiagonalDown(row, column, colour, pair<int, int>(1, 1));
                 }
             }
         }
@@ -1493,7 +1878,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                 }
                 if (count == 2) {
 
-                    return leftHorizontal;
+                    return CalculatePointLeftHorizontal(row, column, colour, pair<int, int>(1, 1));
                 }
             }
         }
@@ -1510,8 +1895,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                 }
                 if (count == 2) {
                     // remove the piece
-                    return rightHorizontal;
-
+                    return CalculatePointRightHorizontal(row, column, colour, pair<int, int>(1, 1));
                 }
             }
         }
@@ -1527,7 +1911,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                     }
                 }
                 if (count == 2) {
-                    return upVertical;
+                    return CalculatePointUpVertical(row, column, colour, pair<int, int>(1, 1));
                 }
             }
         }
@@ -1543,7 +1927,7 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
                     }
                 }
                 if (count == 2) {
-                    return downVertical;
+                    return CalculatePointDownVertical(row, column, colour, pair<int, int>(1, 1));
 
                 }
             }
@@ -1561,134 +1945,137 @@ std::pair<int, int> Strategy::CheckForBridges(int row, int column, char colour)
 bool Strategy::IsGoodPointToCreateBridge(int row, int column, char colour)
 {
     try {
-        pair<int, int> righDiagonalUp = CalculatePointRightDiagonalUp(row, column, colour, pair<int, int>(3, 3));
-        if (righDiagonalUp.first != -1 || righDiagonalUp.second != -1) {
-            if (board->IsPositionEmpty(righDiagonalUp.first, righDiagonalUp.second)) {
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= righDiagonalUp.first; tmpRow--, tmpColumn++) {
-                    if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+        if(board->IsPositionEmpty(row, column))
+        {
+            pair<int, int> righDiagonalUp = CalculatePointRightDiagonalUp(row, column, colour, pair<int, int>(3, 3));
+            if (righDiagonalUp.first != -1 || righDiagonalUp.second != -1) {
+                if (board->IsPositionEmpty(righDiagonalUp.first, righDiagonalUp.second)) {
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow >= righDiagonalUp.first; tmpRow--, tmpColumn++) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
+                    }
+                    if (count == 2) {
+                        return true;
                     }
                 }
-                if (count == 2) {
-                    return true;
+
+            }
+            pair<int, int> righDiagonalDown = CalculatePointRightDiagonalDown(row, column, colour, pair<int, int>(3, 3));
+            if (righDiagonalDown.first != -1 || righDiagonalDown.second != -1) {
+                if (board->IsPositionEmpty(righDiagonalDown.first, righDiagonalDown.second)) {
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow <= righDiagonalDown.first; tmpRow++, tmpColumn--) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
+                    }
+                    if (count == 2) {
+                        return true;
+
+                    }
                 }
             }
+            // calculate the point ie 3 distance away in lt diagonal -up send (-1, -1) if not within board
+            pair<int, int> leftDiagonalUp = CalculatePointLeftDiagonalUp(row, column, colour, pair<int, int>(3, 3));
+            if (leftDiagonalUp.first != -1 || leftDiagonalUp.second != -1) {
+                if (board->IsPositionEmpty(leftDiagonalUp.first, leftDiagonalUp.second)) {
 
-        }
-        pair<int, int> righDiagonalDown = CalculatePointRightDiagonalDown(row, column, colour, pair<int, int>(3, 3));
-        if (righDiagonalDown.first != -1 || righDiagonalDown.second != -1) {
-            if (board->IsPositionEmpty(righDiagonalDown.first, righDiagonalDown.second)) {
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= righDiagonalDown.first; tmpRow++, tmpColumn--) {
-                    if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow >= leftDiagonalUp.first; tmpRow--, tmpColumn--) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
-                    return true;
-
+                    if (count == 2) {
+                        return true;
+                    }
                 }
             }
-        }
-        // calculate the point ie 3 distance away in lt diagonal -up send (-1, -1) if not within board
-        pair<int, int> leftDiagonalUp = CalculatePointLeftDiagonalUp(row, column, colour, pair<int, int>(3, 3));
-        if (leftDiagonalUp.first != -1 || leftDiagonalUp.second != -1) {
-            if (board->IsPositionEmpty(leftDiagonalUp.first, leftDiagonalUp.second)) {
+            // calculate the point ie 3 distance away in lt diagonal -down send (-1, -1) if not within board
+            pair<int, int> leftDiagonalDown = CalculatePointLeftDiagonalDown(row, column, colour, pair<int, int>(3, 3));
+            if (leftDiagonalDown.first != -1 || leftDiagonalDown.second != -1) {
+                if (board->IsPositionEmpty(leftDiagonalDown.first, leftDiagonalDown.second)) {
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= leftDiagonalUp.first; tmpRow--, tmpColumn--) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow <= leftDiagonalDown.first; tmpRow++, tmpColumn++) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
-                    return true;
+                    if (count == 2) {
+
+                        return true;
+                    }
                 }
             }
-        }
-        // calculate the point ie 3 distance away in lt diagonal -down send (-1, -1) if not within board
-        pair<int, int> leftDiagonalDown = CalculatePointLeftDiagonalDown(row, column, colour, pair<int, int>(3, 3));
-        if (leftDiagonalDown.first != -1 || leftDiagonalDown.second != -1) {
-            if (board->IsPositionEmpty(leftDiagonalDown.first, leftDiagonalDown.second)) {
+            // calculate the point ie 3 distance away in lt horizontal send (-1, -1) if not within board
+            pair<int, int> leftHorizontal = CalculatePointLeftHorizontal(row, column, colour, pair<int, int>(3, 3));
+            if (leftHorizontal.first != -1 || leftHorizontal.second != -1) {
+                if (board->IsPositionEmpty(leftHorizontal.first, leftHorizontal.second)) {
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= leftDiagonalDown.first; tmpRow++, tmpColumn++) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpColumn >= leftHorizontal.second; tmpColumn--) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
+                    if (count == 2) {
 
-                    return true;
+                        return true;
+                    }
                 }
             }
-        }
-        // calculate the point ie 3 distance away in lt horizontal send (-1, -1) if not within board
-        pair<int, int> leftHorizontal = CalculatePointLeftHorizontal(row, column, colour, pair<int, int>(3, 3));
-        if (leftHorizontal.first != -1 || leftHorizontal.second != -1) {
-            if (board->IsPositionEmpty(leftHorizontal.first, leftHorizontal.second)) {
+            // calculate the point ie 3 distance away in rt horizontal send (-1, -1) if not within board
+            pair<int, int> rightHorizontal = CalculatePointRightHorizontal(row, column, colour, pair<int, int>(3, 3));
+            if (rightHorizontal.first != -1 || rightHorizontal.second != -1) {
+                if (board->IsPositionEmpty(rightHorizontal.first, rightHorizontal.second)) {
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpColumn >= leftHorizontal.second; tmpColumn--) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpColumn <= rightHorizontal.second; tmpColumn++) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
+                    if (count == 2) {
+                        // remove the piece
+                        return true;
 
-                    return true;
+                    }
                 }
             }
-        }
-        // calculate the point ie 3 distance away in rt horizontal send (-1, -1) if not within board
-        pair<int, int> rightHorizontal = CalculatePointRightHorizontal(row, column, colour, pair<int, int>(3, 3));
-        if (rightHorizontal.first != -1 || rightHorizontal.second != -1) {
-            if (board->IsPositionEmpty(rightHorizontal.first, rightHorizontal.second)) {
+            // calculate the point ie 3 distance away in rt vertical send (-1, -1) if not within board
+            pair<int, int> upVertical = CalculatePointUpVertical(row, column, colour, pair<int, int>(3, 3));
+            if (upVertical.first != -1 || upVertical.second != -1) {
+                if (board->IsPositionEmpty(upVertical.first, upVertical.second)) {
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpColumn <= rightHorizontal.second; tmpColumn++) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow >= upVertical.first; tmpRow--) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
-                    // remove the piece
-                    return true;
-
+                    if (count == 2) {
+                        return true;
+                    }
                 }
             }
-        }
-        // calculate the point ie 3 distance away in rt vertical send (-1, -1) if not within board
-        pair<int, int> upVertical = CalculatePointUpVertical(row, column, colour, pair<int, int>(3, 3));
-        if (upVertical.first != -1 || upVertical.second != -1) {
-            if (board->IsPositionEmpty(upVertical.first, upVertical.second)) {
+            // calculate the point ie 3 distance away in tt vertical send (-1, -1) if not within board
+            pair<int, int> downVertical = CalculatePointDownVertical(row, column, colour, pair<int, int>(3, 3));
+            if (downVertical.first != -1 || downVertical.second != -1) {
+                if (board->IsPositionEmpty(downVertical.first, downVertical.second)) {
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow >= upVertical.first; tmpRow--) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
+                    int count = 0;
+                    for (int tmpRow = row, tmpColumn = column; tmpRow <= downVertical.first; tmpRow++) {
+                        if (board->IsPositionEmpty(tmpRow, tmpColumn)) {
+                            count++;
+                        }
                     }
-                }
-                if (count == 2) {
-                    return true;
-                }
-            }
-        }
-        // calculate the point ie 3 distance away in tt vertical send (-1, -1) if not within board
-        pair<int, int> downVertical = CalculatePointDownVertical(row, column, colour, pair<int, int>(3, 3));
-        if (downVertical.first != -1 || downVertical.second != -1) {
-            if (board->IsPositionEmpty(downVertical.first, downVertical.second)) {
+                    if (count == 2) {
+                        return true;
 
-                int count = 0;
-                for (int tmpRow = row, tmpColumn = column; tmpRow <= downVertical.first; tmpRow++) {
-                    if ( board->IsPositionEmpty(tmpRow, tmpColumn)) {
-                        count++;
                     }
-                }
-                if (count == 2) {
-                    return true;
-
                 }
             }
         }
@@ -1700,4 +2087,11 @@ bool Strategy::IsGoodPointToCreateBridge(int row, int column, char colour)
         cout << "Internal Server Error: IsGoodPointToCreateBridge" << endl;
         return false;
     }
+}
+bool Strategy::ArePointsValid(int row, int column)
+{
+    if (row == -1 || column == -1) {
+        return false;
+    }
+    return true;
 }

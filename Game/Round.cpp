@@ -24,8 +24,8 @@ bool Round::PlayRound()
             // for now it is just dummy data ie 0
             int humanScore = pointCounter->CalculatedScoreInLoadedRound(human->GetColour());
             int computerScore = pointCounter->CalculatedScoreInLoadedRound(computer->GetColour());
-            human->IncreaseRoundPoint(humanScore);
-            computer->IncreaseRoundPoint(computerScore);
+            human->IncreaseRoundPoint(humanScore + human->GetTotalCapture());
+            computer->IncreaseRoundPoint(computerScore + computer->GetTotalCapture());
             cout << "The game was loaded" << endl;
             
         }
@@ -39,7 +39,9 @@ bool Round::PlayRound()
                 // check if human won
                 if (GetPlayerWins() || human->GetTotalCapture() == CAPTURE_REQ_TO_WIN)
                 {
-                    AnnounceRoundWinner();
+                    if (!AnnounceRoundWinner()) {
+                        cout << "There was error announcing the winner of round" << endl;
+                    }
 
                     if (!PrintScores())
                     {
@@ -93,7 +95,7 @@ bool Round::PlayRound()
 
 void Round::HandleHumanTurn()
 {
-    string position;
+    string answer;
     pair<int, int> numericalPosition;
 
     do
@@ -103,23 +105,28 @@ void Round::HandleHumanTurn()
             cout << "There is no place to insert any more piece" << endl;
             return;
         }
-        position = AskForPosition();
-        numericalPosition = ConvertMoveToRowCol(position);
+        answer = AskForPosition();
+        if (answer == "HELP") {
+           numericalPosition =  this->strategy->GenerateMove(human->GetColour(), human->GetTotalMoves(), human->GetTotalRoundPoints(), computer->GetTotalRoundPoints());
+           char newColumn = numericalPosition.second + 'A';
+           cout << "So the best option for you is " << newColumn << 19 - numericalPosition.first << endl;
+        }
+        else {
+            numericalPosition = ConvertMoveToRowCol(answer);
+        }
 
 
-    } while (!human->MakeMove(numericalPosition.first, numericalPosition.second));
+    } while (!human->MakeMove(numericalPosition.first, numericalPosition.second, computer->GetTotalCapture()));
 
     int tmpScore = pointCounter->CalculatePoint(numericalPosition.first, numericalPosition.second, human->GetColour());
     int capturePoint = pointCounter->CalculateCapture(numericalPosition.first, numericalPosition.second, human->GetColour());
     if(tmpScore > 0) 
     {
-        human->IncreasePoint(tmpScore);
         human->IncreaseRoundPoint(tmpScore);
     }
     if (capturePoint > 0)
     {
         human->SetTotalCapure(capturePoint);
-        human->IncreasePoint(capturePoint);
         human->IncreaseRoundPoint(capturePoint);
     }
 
@@ -136,7 +143,7 @@ void Round::HandleComputerTurn()
     }
     pair<int, int> numericalPosition = strategy->GenerateMove(computer->GetColour(), computer->GetTotalMoves(), computer->GetTotalPoints(), human->GetTotalPoints());
 
-    while (!computer->MakeMove(numericalPosition.first, numericalPosition.second))
+    while (!computer->MakeMove(numericalPosition.first, numericalPosition.second, human->GetTotalCapture()))
     {
         numericalPosition = strategy->GenerateMove(computer->GetColour(), computer->GetTotalMoves(), computer->GetTotalPoints(), human->GetTotalPoints());
     }
@@ -145,13 +152,11 @@ void Round::HandleComputerTurn()
      int capturePoint = pointCounter->CalculateCapture(numericalPosition.first, numericalPosition.second, computer->GetColour());
      if (tmpScore > 0)
      {
-         computer->IncreasePoint(tmpScore + capturePoint);
          computer->IncreaseRoundPoint(tmpScore + capturePoint);
      }
      if (capturePoint > 0)
      {
          computer->SetTotalCapure(capturePoint);
-         computer->IncreasePoint(capturePoint);
          computer->IncreaseRoundPoint(capturePoint);
      }
     SetNextMover(HUMAN_CHARACTER);
@@ -184,10 +189,6 @@ bool Round::RestGame()
     try
     {
         SetDoesPlayerWantToContinuetName(true);
-        human->IncreaseRoundPoint(0);
-        computer->IncreaseRoundPoint(0);
-        human->SetTotalCapure(0);
-        computer->SetTotalCapure(0);
         playerWins = false;
         isLoaded = false;
         return true;
@@ -228,6 +229,11 @@ bool Round::Continue()
     }
 }
 
+char Round::GetNextMover()
+{
+    return this->nextMover;
+}
+
 void Round::SetNextMover(char player)
 {
     nextMover = player;
@@ -262,34 +268,12 @@ void Round::SetPlayerWins(bool answer) {
 bool Round::PrintScores()
 {
     try {
-        cout << "Human:" << endl;
-        cout << "Capture pairs: " << human->GetTotalCapture() << endl;
-        cout << "Score: " << human->GetTotalPoints() << endl;
-        cout << endl << endl;
-        cout << "Computer:" << endl;
-        cout << "Capture pairs: " << computer->GetTotalCapture() << endl;
-        cout << "Score: " << computer->GetTotalPoints() << endl;
-        cout << endl << endl;
-        
-        cout << "Next player: ";
-        if (this->nextMover == HUMAN_CHARACTER) {
-            cout << "Human - ";
-            if (human->GetColour() == board->GetWhitePiece()) {
-                cout << "White" << endl;
-            }
-            else {
-                cout << "Black" << endl;
-            }
-        }
-        else {
-            cout << "Computer - ";
-            if (computer->GetColour() == board->GetWhitePiece()) {
-                cout << "White" << endl;
-            }
-            else {
-                cout << "Black" << endl;
-            }
-        }
+        cout << "Human: " << endl;
+        cout << "Total capture this round is " << human->GetTotalCapture() << endl;
+        cout << "Total score this round is " << human->GetTotalRoundPoints() << endl;
+        cout << "Computer: " << endl;
+        cout << "Total capture this round is " << computer->GetTotalCapture() << endl;
+        cout << "Total score this round is " << computer->GetTotalRoundPoints() << endl;
         return true;
     }
     catch (const std::exception& e)
@@ -305,7 +289,7 @@ string Round::AskForPosition()
 {
     string position;
     do {
-        cout << "Where do you want to move you Piece ?" << endl;
+        cout << "Where do you want to move you Piece ? You can let computer decide by typing \"HELP\"" << endl;
         cin >> position;
     } while (position.size() < 2);
     string capitalPosition = "";

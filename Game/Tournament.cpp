@@ -1,5 +1,7 @@
 #include "Tournament.h"
 #include <utility> 
+#include "Serialization.h"
+#include "Coin.h"
 using namespace std;
 // play round
 //make round
@@ -39,15 +41,42 @@ bool Tournament::PlayRound()
 					computer->SetColour(board->GetBlackPiece());
 
 				}
-				else {
+				else if(human->GetTotalPoints() < computer->GetTotalPoints()){
 					computer->SetColour(board->GetWhitePiece());
 					human->SetColour(board->GetBlackPiece());
+				}
+				else {
+					cout << "The first player is decided by coin toss because it wa a time. Guess the side of coin H OR T!" << endl;
+						char userChoice;
+						cin >> userChoice;
+						Coin* coin = new Coin();
+						char humanColour, computerColour;
+					if (coin->Toss())
+					{
+						if (coin->WinOrLose(userChoice))
+						{
+							cout << "You have won the toss please go first" << endl;
+							human->SetColour(board->GetWhitePiece());
+							computer->SetColour(board->GetBlackPiece());
+						}
+						else
+						{
+							cout << "Coumputer has won the toss you will go second" << endl;
+							computer->SetColour(board->GetWhitePiece());
+							human->SetColour(board->GetBlackPiece());
+						}
+					}
+
 				}
 
 			}
 			if (!round->PlayRound()) {
 				// one of the player wins the round
 				if (round->GetPlayerWins()) {
+					if (!SaveScore()) {
+						cout << "Could not save score from tournament" << endl;
+						return false;
+					}
 					totalRoundsPlayed++;
 					//set the player wins flag off
 					round->SetPlayerWins(false);
@@ -75,18 +104,6 @@ bool Tournament::PlayRound()
 						cout << "Internal Server Error" << endl;
 						return false;
 					}
-					//if (!AskToSaveGame()) {
-					//	cout << "Internal Server Error: Input could not be processed" << endl;
-					//	return false;
-					//}
-					//if (GetSave()) {
-					//	if (!SaveGame()) {
-					//		cout << "Internal Server Error: Game could not be saved" << endl;
-					//		return false;
-					//	}
-					//}
-					//cout << "Thank you for playing" << endl;
-					//exit(EXIT_SUCCESS);
 				}
 				else {
 					cout << "Internal Server Error" << endl;
@@ -126,7 +143,7 @@ bool Tournament::PrintWinner()
 			cout << "Congratulations there was a tie" << endl;
 		}
 		else {
-			cout << (human->GetTotalPoints() > computer->GetTotalPoints() ? "Human" : "Computer") << " has won this tournament" << endl;
+			cout << (human->GetTotalPoints() > computer->GetTotalPoints() ? "Human" : "Computer") << " has won this tournament!!!" << endl;
 
 		}
 		return true;
@@ -244,7 +261,33 @@ bool Tournament::SetSave(bool answer)
 bool Tournament::SaveGame()
 {
 	try {
-		cout << "Saving file: dummy" << endl;
+		Serialization* serializationObj = new Serialization(true);
+		string nextPlayer, nextPlayerColour;
+		if (round->GetNextMover() == HUMAN_CHARACTER) {
+			nextPlayer = "Human";
+			if (human->GetColour() == 'W') {
+				nextPlayerColour = "White";
+			}
+			else {
+				nextPlayerColour = "Black";
+			}
+		}
+		else {
+			nextPlayer = "Computer";
+			if (computer->GetColour() == 'W') {
+				nextPlayerColour = "White";
+			}
+			else {
+				nextPlayerColour = "Black";
+			}
+				
+		}
+		if (!serializationObj->SaveGame(this->board, this->human, this->computer, nextPlayer, nextPlayerColour))
+		{
+			cout << "Internal Server Error: Tournament::SaveGame()"<< endl;
+			return false;
+		}
+		cout << "Done Saving." << endl;
 		return true;
 	}
 	catch (const std::exception& e)
@@ -279,6 +322,20 @@ bool Tournament::ResetGame()
 	{
 		std::cerr << e.what() << '\n';
 		cout << "Internal Server Error: Tournament::SaveGame";
+		return false;
+	}
+}
+bool Tournament::SaveScore() {
+	try {
+		this->human->IncreasePoint(human->GetTotalRoundPoints());
+		this->computer->IncreasePoint(computer->GetTotalRoundPoints());
+		
+		return true;
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << e.what() << '\n';
+		cout << "Internal Server Error: Tournament::SaveScore";
 		return false;
 	}
 }

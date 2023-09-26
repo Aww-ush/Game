@@ -5,10 +5,8 @@ class Tournament
 {
 public:
 	Tournament(Board* board, Player* human, Player* computer, bool isLoaded, char startingPlayer);
-	Tournament();
 	bool PlayRound();
 	bool SaveGame();
-	bool LoadGame();
 	bool PrintWinner();
 	bool AskToPlayNewRound();
 	bool SetPlayNextRound(bool input);
@@ -18,6 +16,7 @@ public:
 	bool GetSave();
 	bool SetSave(bool answer);
 	bool ResetGame();
+	bool SaveScore();
 private:
 	char startingPlayer;
 	int totalRoundsPlayed;
@@ -30,6 +29,8 @@ private:
 	PointCounter* pointCounter;
 	bool save;
 	bool isLoaded;
+	static  const char HUMAN_CHARACTER = 'H';
+	static  const char COMPUTER_CHARACTER = 'C';
 	// remove human and computer points
 };
 
